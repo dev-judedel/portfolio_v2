@@ -1,6 +1,6 @@
 "use client";
 import { motion } from "framer-motion";
-import { MapPin, Mail, Phone, Globe, Github, Download } from "lucide-react";
+import { MapPin, Mail, Phone, Globe, Github, Download, Linkedin } from "lucide-react";
 import Link from "next/link";
 
 const fade = (delay = 0) => ({
@@ -75,7 +75,8 @@ export default function AboutPage() {
               { icon: Phone, label: "Phone",    value: "0956-130-5511",               href: "tel:+639561305511" },
               { icon: MapPin,label: "Location", value: "Balagtas, Bulacan, PH",       href: null },
               { icon: Globe, label: "Portfolio",value: "dev-judedel.github.io",       href: "https://dev-judedel.github.io/myportfolio/" },
-              { icon: Github,label: "GitHub",   value: "github.com/dev-judedel",      href: "https://github.com/dev-judedel" },
+              { icon: Github,   label: "GitHub",    value: "github.com/dev-judedel",            href: "https://github.com/dev-judedel" },
+              { icon: Linkedin, label: "LinkedIn",  value: "linkedin.com/in/jude-delacruz",      href: "https://www.linkedin.com/in/jude-delacruz/" },
             ].map(({ icon: Icon, label, value, href }, i) => (
               <div key={i} style={{ display: "flex", gap: "10px", alignItems: "flex-start", marginBottom: i < 4 ? "10px" : 0 }}>
                 <div style={{ width: 28, height: 28, borderRadius: "6px", background: "var(--bg)", border: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>

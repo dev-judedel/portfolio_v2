@@ -1,10 +1,12 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import {
   LayoutDashboard, FolderKanban, Wrench,
-  Briefcase, Mail, User, Download, Github, ExternalLink
+  Briefcase, Mail, User, Download, Github, Linkedin
 } from "lucide-react";
+import type { Profile } from "@/lib/types";
 
 const navItems = [
   { href: "/",           label: "Dashboard",  icon: LayoutDashboard },
@@ -17,6 +19,19 @@ const navItems = [
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const [profile, setProfile] = useState<Partial<Profile>>({
+    name: "Jude Dela Cruz",
+    title: "Full Stack Developer",
+    available: true,
+    avatar_url: null,
+  });
+
+  useEffect(() => {
+    fetch("/api/profile")
+      .then(r => r.json())
+      .then(d => setProfile(d))
+      .catch(() => {});
+  }, []);
 
   return (
     <aside className="desktop-sidebar" style={{
@@ -26,78 +41,104 @@ export default function Sidebar() {
       borderRight: "1px solid var(--border)",
       display: "flex", flexDirection: "column",
       zIndex: 50,
+      transition: "background 0.2s, border-color 0.2s",
     }}>
-      {/* Logo / Name */}
+
+      {/* ── Profile card ── */}
       <div style={{
-        height: "var(--header-height)",
-        display: "flex", alignItems: "center",
-        padding: "0 16px",
+        padding: "14px 12px",
         borderBottom: "1px solid var(--border)",
-        gap: "10px",
       }}>
-        <div style={{
-          width: 28, height: 28, borderRadius: "6px",
-          background: "var(--accent)", color: "#fff",
-          display: "flex", alignItems: "center", justifyContent: "center",
-          fontSize: "12px", fontWeight: 700, flexShrink: 0,
-        }}>JD</div>
-        <div style={{ minWidth: 0 }}>
-          <p style={{ fontSize: "13px", fontWeight: 600, color: "var(--fg)", lineHeight: 1.2 }}>Jude Dela Cruz</p>
-          <p style={{ fontSize: "11px", color: "var(--fg-3)", lineHeight: 1.2, marginTop: "1px" }}>Full Stack Developer</p>
+        <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+          {/* Avatar */}
+          <div style={{ position: "relative", flexShrink: 0 }}>
+            {profile.avatar_url ? (
+              <img
+                src={profile.avatar_url}
+                alt={profile.name}
+                style={{ width: 38, height: 38, borderRadius: "50%", objectFit: "cover", border: "2px solid var(--border)" }}
+              />
+            ) : (
+              <div style={{
+                width: 38, height: 38, borderRadius: "50%",
+                background: "linear-gradient(135deg, var(--primary) 0%, #7c3aed 100%)",
+                color: "#fff", display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: "14px", fontWeight: 700, border: "2px solid var(--border)",
+              }}>
+                {(profile.name ?? "JD").split(" ").map(w => w[0]).join("").slice(0, 2)}
+              </div>
+            )}
+            {/* Online dot */}
+            <span style={{
+              position: "absolute", bottom: 1, right: 1,
+              width: 9, height: 9, borderRadius: "50%",
+              background: profile.available ? "var(--green)" : "var(--fg-4)",
+              border: "2px solid var(--surface)",
+            }} />
+          </div>
+
+          <div style={{ minWidth: 0 }}>
+            <p style={{ fontSize: "12px", fontWeight: 600, color: "var(--fg)", lineHeight: 1.2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {profile.name ?? "Jude Dela Cruz"}
+            </p>
+            <p style={{ fontSize: "10px", color: "var(--fg-4)", marginTop: "2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {profile.title ?? "Full Stack Developer"}
+            </p>
+          </div>
         </div>
       </div>
 
-      {/* Nav */}
-      <nav style={{ flex: 1, padding: "8px 8px", overflowY: "auto" }}>
+      {/* ── Nav ── */}
+      <nav style={{ flex: 1, padding: "8px", overflowY: "auto" }}>
         <p style={{
           fontSize: "10px", fontWeight: 600, color: "var(--fg-4)",
           textTransform: "uppercase", letterSpacing: "0.08em",
-          padding: "8px 8px 4px",
-        }}>Menu</p>
+          padding: "8px 6px 5px",
+        }}>Navigation</p>
 
         {navItems.map(({ href, label, icon: Icon }) => {
           const active = pathname === href;
           return (
             <Link key={href} href={href} style={{
               display: "flex", alignItems: "center", gap: "8px",
-              padding: "7px 8px", borderRadius: "6px", marginBottom: "1px",
+              padding: "6px 8px", borderRadius: "7px", marginBottom: "1px",
               textDecoration: "none",
               fontSize: "13px", fontWeight: active ? 500 : 400,
-              color: active ? "var(--fg)" : "var(--fg-3)",
-              background: active ? "var(--bg)" : "transparent",
-              border: active ? "1px solid var(--border)" : "1px solid transparent",
+              color: active ? "var(--primary)" : "var(--fg-3)",
+              background: active ? "var(--primary-bg)" : "transparent",
+              border: active ? "1px solid var(--primary-border)" : "1px solid transparent",
               transition: "all 0.12s",
             }}
-              onMouseEnter={e => { if (!active) { (e.currentTarget as HTMLElement).style.background = "var(--bg)"; (e.currentTarget as HTMLElement).style.color = "var(--fg)"; }}}
+              onMouseEnter={e => { if (!active) { (e.currentTarget as HTMLElement).style.background = "var(--surface-2)"; (e.currentTarget as HTMLElement).style.color = "var(--fg)"; }}}
               onMouseLeave={e => { if (!active) { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = "var(--fg-3)"; }}}
             >
-              <Icon size={15} strokeWidth={active ? 2 : 1.5} />
+              <Icon size={14} strokeWidth={active ? 2.2 : 1.6} />
               {label}
-              {active && <span style={{ marginLeft: "auto", width: 5, height: 5, borderRadius: "50%", background: "var(--accent)", flexShrink: 0 }} />}
+              {active && <span style={{ marginLeft: "auto", width: 5, height: 5, borderRadius: "50%", background: "var(--primary)", flexShrink: 0 }} />}
             </Link>
           );
         })}
       </nav>
 
-      {/* Bottom links */}
-      <div style={{ padding: "12px 8px", borderTop: "1px solid var(--border)" }}>
-        <a href="/cv/Jude_Dela_Cruz_CV.pdf" download className="btn btn-secondary" style={{ width: "100%", justifyContent: "center", marginBottom: "6px" }}>
-          <Download size={13} /> Download CV
+      {/* ── Bottom ── */}
+      <div style={{ padding: "10px 8px", borderTop: "1px solid var(--border)" }}>
+        <a href="/cv/Jude_Dela_Cruz_CV.pdf" download className="btn btn-primary" style={{ width: "100%", justifyContent: "center", marginBottom: "6px", fontSize: "12px", padding: "6px 12px" }}>
+          <Download size={12} /> Download CV
         </a>
-        <div style={{ display: "flex", gap: "6px" }}>
-          <a href="https://github.com/dev-judedel" target="_blank" rel="noopener noreferrer"
-            style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: "5px", padding: "6px", borderRadius: "6px", border: "1px solid var(--border)", color: "var(--fg-3)", textDecoration: "none", fontSize: "12px", transition: "all 0.12s" }}
+        <div style={{ display: "flex", gap: "5px" }}>
+          <a href="https://github.com/dev-judedel" target="_blank" rel="noopener noreferrer" title="GitHub"
+            style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: "5px", padding: "5px", borderRadius: "6px", border: "1px solid var(--border)", color: "var(--fg-3)", textDecoration: "none", fontSize: "11px", transition: "all 0.12s" }}
             onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "var(--border-strong)"; (e.currentTarget as HTMLElement).style.color = "var(--fg)"; }}
             onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "var(--border)"; (e.currentTarget as HTMLElement).style.color = "var(--fg-3)"; }}
           >
-            <Github size={13} /> GitHub
+            <Github size={12} /> GitHub
           </a>
-          <a href="https://dev-judedel.github.io/myportfolio/" target="_blank" rel="noopener noreferrer"
-            style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: "5px", padding: "6px", borderRadius: "6px", border: "1px solid var(--border)", color: "var(--fg-3)", textDecoration: "none", fontSize: "12px", transition: "all 0.12s" }}
+          <a href="https://www.linkedin.com/in/jude-delacruz/" target="_blank" rel="noopener noreferrer" title="LinkedIn"
+            style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: "5px", padding: "5px", borderRadius: "6px", border: "1px solid var(--border)", color: "var(--fg-3)", textDecoration: "none", fontSize: "11px", transition: "all 0.12s" }}
             onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "var(--border-strong)"; (e.currentTarget as HTMLElement).style.color = "var(--fg)"; }}
             onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "var(--border)"; (e.currentTarget as HTMLElement).style.color = "var(--fg-3)"; }}
           >
-            <ExternalLink size={13} /> Portfolio
+            <Linkedin size={12} /> LinkedIn
           </a>
         </div>
       </div>

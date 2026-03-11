@@ -1,50 +1,15 @@
 "use client";
 import { motion } from "framer-motion";
+import { useEffect, useState } from "react";
+import type { Skill } from "@/lib/types";
 
-const groups = [
-  {
-    category: "Backend Development",
-    color: "var(--blue)",
-    colorBg: "var(--blue-bg)",
-    items: [
-      { name: "Python",      level: 95, note: "Flask · Django · GTK/Glade · Pandas" },
-      { name: "PHP",         level: 95, note: "Native PHP · Laravel · REST APIs" },
-      { name: "REST API",    level: 90, note: "Design · Integration · Documentation" },
-    ],
-  },
-  {
-    category: "Database & Data",
-    color: "#7c3aed",
-    colorBg: "#f5f3ff",
-    items: [
-      { name: "MySQL",       level: 95, note: "Design · Optimization · Stored Procedures" },
-      { name: "PostgreSQL",  level: 85, note: "Migration · Performance tuning" },
-      { name: "Data Modeling", level: 88, note: "Reporting · BI · openpyxl · Pandas" },
-    ],
-  },
-  {
-    category: "Frontend",
-    color: "#d97706",
-    colorBg: "#fffbeb",
-    items: [
-      { name: "HTML / CSS",  level: 88, note: "Responsive · Semantic markup" },
-      { name: "JavaScript",  level: 80, note: "ES6+ · DOM manipulation" },
-      { name: "Bootstrap",   level: 85, note: "Chart.js · Responsive layouts" },
-    ],
-  },
-  {
-    category: "Tools & Practices",
-    color: "#16a34a",
-    colorBg: "var(--green-bg)",
-    items: [
-      { name: "Git",          level: 90, note: "Version control · Code review · Branching" },
-      { name: "Architecture", level: 92, note: "System design · ERP · Billing logic" },
-      { name: "Leadership",   level: 90, note: "Team lead · Mentorship · Planning" },
-    ],
-  },
-];
+type Level = "Expert" | "Advanced" | "Proficient";
 
-const allTech = ["Python", "PHP", "Laravel", "Flask", "Django", "GTK/Glade", "MySQL", "PostgreSQL", "HTML", "CSS", "JavaScript", "Bootstrap", "Chart.js", "Pandas", "openpyxl", "Git", "REST API", "MVC"];
+const levelColor: Record<Level, { bg: string; color: string; border: string }> = {
+  Expert:     { bg: "var(--green-bg)",  color: "var(--green)",  border: "var(--green)" },
+  Advanced:   { bg: "var(--blue-bg)",   color: "var(--blue)",   border: "var(--blue)" },
+  Proficient: { bg: "var(--bg)",        color: "var(--fg-3)",   border: "var(--border)" },
+};
 
 const fade = (delay = 0) => ({
   initial: { opacity: 0, y: 10 },
@@ -53,50 +18,83 @@ const fade = (delay = 0) => ({
 });
 
 export default function SkillsPage() {
+  const [skills, setSkills] = useState<Skill[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/skills").then(r => r.json()).then(d => { setSkills(d); setLoading(false); });
+  }, []);
+
+  if (loading) return (
+    <div className="page-content" style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 200 }}>
+      <div style={{ width: 20, height: 20, border: "2px solid var(--border)", borderTopColor: "var(--fg-3)", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    </div>
+  );
+
+  // Group by category, preserving sort_order within each group
+  const grouped = skills.reduce((acc, s) => {
+    if (!acc[s.category]) acc[s.category] = [];
+    acc[s.category].push(s);
+    return acc;
+  }, {} as Record<string, Skill[]>);
+
+  const categories = Object.entries(grouped);
+
   return (
     <div className="page-content">
-
-      {/* Skill groups */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "16px" }} className="skills-grid">
-        {groups.map((g, gi) => (
-          <motion.div key={gi} {...fade(gi * 0.07)} className="card" style={{ padding: "20px" }}>
+        {categories.map(([category, items], gi) => (
+          <motion.div key={category} {...fade(gi * 0.07)} className="card" style={{ padding: "20px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "16px" }}>
-              <span style={{ width: 8, height: 8, borderRadius: "50%", background: g.color, flexShrink: 0 }} />
-              <p style={{ fontSize: "13px", fontWeight: 600, color: "var(--fg)" }}>{g.category}</p>
+              <span style={{ width: 8, height: 8, borderRadius: "50%", background: items[0]?.accent ?? "var(--blue)", flexShrink: 0 }} />
+              <p style={{ fontSize: "13px", fontWeight: 600, color: "var(--fg)" }}>{category}</p>
             </div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-              {g.items.map((item, ii) => (
-                <div key={ii}>
-                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "5px" }}>
-                    <span style={{ fontSize: "13px", fontWeight: 500, color: "var(--fg)" }}>{item.name}</span>
-                    <span style={{ fontSize: "11px", color: "var(--fg-4)", fontWeight: 500 }}>{item.level}%</span>
+            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+              {items.map((item) => {
+                const lStyle = levelColor[item.level as Level] ?? levelColor.Proficient;
+                return (
+                  <div key={item.id} style={{
+                    display: "flex", alignItems: "center", gap: "10px",
+                    padding: "8px 10px", borderRadius: "6px",
+                    background: "var(--bg)", border: "1px solid var(--border)",
+                    transition: "border-color 0.12s",
+                  }}
+                    onMouseEnter={e => (e.currentTarget.style.borderColor = "var(--border-strong)")}
+                    onMouseLeave={e => (e.currentTarget.style.borderColor = "var(--border)")}
+                  >
+                    <span style={{ fontSize: "16px", flexShrink: 0, lineHeight: 1 }}>{item.icon}</span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontSize: "12px", fontWeight: 600, color: "var(--fg)", lineHeight: 1.2 }}>{item.name}</p>
+                      <p style={{ fontSize: "10px", color: "var(--fg-4)", marginTop: "2px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{item.note}</p>
+                    </div>
+                    <span style={{
+                      fontSize: "10px", fontWeight: 600, padding: "2px 7px", borderRadius: "4px",
+                      background: lStyle.bg, color: lStyle.color,
+                      border: `1px solid ${lStyle.border}`,
+                      flexShrink: 0, letterSpacing: "0.02em",
+                    }}>{item.level}</span>
                   </div>
-                  {/* Progress bar */}
-                  <div style={{ height: 5, background: "var(--bg)", borderRadius: "3px", overflow: "hidden", border: "1px solid var(--border)" }}>
-                    <motion.div
-                      initial={{ width: 0 }}
-                      animate={{ width: `${item.level}%` }}
-                      transition={{ duration: 0.8, delay: 0.2 + gi * 0.1 + ii * 0.05, ease: "easeOut" as const }}
-                      style={{ height: "100%", background: g.color, borderRadius: "3px" }}
-                    />
-                  </div>
-                  <p style={{ fontSize: "11px", color: "var(--fg-4)", marginTop: "4px" }}>{item.note}</p>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </motion.div>
         ))}
       </div>
 
-      {/* All technologies */}
-      <motion.div {...fade(0.3)} className="card" style={{ padding: "20px" }}>
-        <p className="section-title" style={{ marginBottom: "12px" }}>All Technologies</p>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
-          {allTech.map(t => (
-            <span key={t} className="badge badge-gray" style={{ fontSize: "12px", padding: "4px 10px" }}>{t}</span>
-          ))}
-        </div>
+      <motion.div {...fade(0.32)} className="card" style={{ padding: "14px 20px", display: "flex", alignItems: "center", gap: "20px", flexWrap: "wrap" }}>
+        <p style={{ fontSize: "11px", fontWeight: 600, color: "var(--fg-4)", textTransform: "uppercase", letterSpacing: "0.08em" }}>Proficiency</p>
+        {(["Expert", "Advanced", "Proficient"] as Level[]).map(l => {
+          const s = levelColor[l];
+          return (
+            <div key={l} style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+              <span style={{ width: 8, height: 8, borderRadius: "50%", background: s.color }} />
+              <span style={{ fontSize: "12px", color: "var(--fg-3)" }}>{l}</span>
+            </div>
+          );
+        })}
+        <p style={{ fontSize: "12px", color: "var(--fg-4)", marginLeft: "auto" }}>Based on production use in enterprise systems</p>
       </motion.div>
 
       <style>{`
