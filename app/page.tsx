@@ -8,7 +8,7 @@ import {
   Clock, CheckCircle2, Zap, Code2, Database, Globe,
   ArrowUpRight, Download, Star
 } from "lucide-react";
-import type { Profile, Project, Award as AwardType } from "@/lib/types";
+import type { Profile, Project, Award as AwardType, Skill } from "@/lib/types";
 
 const fade = (delay = 0) => ({
   initial: { opacity: 0, y: 10 },
@@ -18,43 +18,27 @@ const fade = (delay = 0) => ({
 
 const KPI_ACCENTS = ["var(--primary)", "var(--purple)", "var(--green)", "var(--amber)"];
 
-const techStack = [
-  { name: "Python",     icon: "🐍", level: 95, color: "var(--primary)" },
-  { name: "PHP/Laravel",icon: "🐘", level: 95, color: "var(--purple)" },
-  { name: "MySQL",      icon: "🗄️", level: 95, color: "var(--green)" },
-  { name: "PostgreSQL", icon: "📦", level: 85, color: "var(--amber)" },
-  { name: "JavaScript", icon: "⚡", level: 80, color: "var(--primary)" },
-  { name: "Next.js",    icon: "▲",  level: 75, color: "var(--fg-3)" },
-];
-
-const activity = [
-  { icon: CheckCircle2, color: "var(--green)",   label: "ERP System",          desc: "Deployed payment logic update",  time: "Active" },
-  { icon: CheckCircle2, color: "var(--green)",   label: "Billing Platform",     desc: "e-SOA automation live",          time: "Active" },
-  { icon: CheckCircle2, color: "var(--primary)", label: "QR Gate Pass",         desc: "Multi-tenant rollout complete",  time: "Active" },
-  { icon: Activity,     color: "var(--purple)",  label: "BI Dashboards",        desc: "Added real-time chart widgets",  time: "Active" },
-];
-
-const quickLinks = [
-  { label: "Projects",   href: "/projects",   icon: FolderKanban, desc: "4 systems in production", color: "var(--primary)" },
-  { label: "Skills",     href: "/skills",     icon: Wrench,       desc: "18 technologies",          color: "var(--purple)" },
-  { label: "Experience", href: "/experience", icon: Briefcase,    desc: "8+ years · AsianLand",     color: "var(--green)" },
-  { label: "Contact",    href: "/contact",    icon: Mail,         desc: "Open to opportunities",    color: "var(--amber)" },
-];
+const STATUS_COLORS = ["var(--green)", "var(--primary)", "var(--purple)", "var(--amber)"];
+const STATUS_ICONS  = [CheckCircle2, CheckCircle2, Activity, Zap];
+const STACK_COLORS  = ["var(--primary)", "var(--purple)", "var(--green)", "var(--amber)", "var(--primary)", "var(--fg-3)"];
 
 export default function DashboardPage() {
-  const [profile, setProfile] = useState<Partial<Profile> | null>(null);
+  const [profile, setProfile]   = useState<Partial<Profile> | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
-  const [awards, setAwards] = useState<AwardType[]>([]);
+  const [awards, setAwards]     = useState<AwardType[]>([]);
+  const [skills, setSkills]     = useState<Skill[]>([]);
 
   useEffect(() => {
     Promise.all([
       fetch("/api/profile").then(r => r.json()),
       fetch("/api/projects").then(r => r.json()),
       fetch("/api/awards").then(r => r.json()),
-    ]).then(([p, proj, aw]) => {
+      fetch("/api/skills").then(r => r.json()),
+    ]).then(([p, proj, aw, sk]) => {
       setProfile(p);
       setProjects(proj.slice(0, 4));
       setAwards(aw);
+      setSkills(Array.isArray(sk) ? sk : []);
     }).catch(() => {});
   }, []);
 
@@ -67,11 +51,24 @@ export default function DashboardPage() {
   const years = profile?.years_experience ?? "8+";
   const initials = name.split(" ").map((w: string) => w[0]).join("").slice(0, 2);
 
+  const techStack = skills.slice(0, 6).map((s, i) => ({
+    name:  s.name,
+    icon:  s.icon  || "⚡",
+    level: s.level === "Expert" ? 95 : s.level === "Advanced" ? 80 : 65,
+    color: STACK_COLORS[i % STACK_COLORS.length],
+  }));
+
+  const topTags = Array.from(
+    new Set(projects.flatMap(p => p.tags?.slice(0, 2) ?? []))
+  ).slice(0, 3).join(" · ") || "Python · PHP · SQL";
+
+  const awardYears = awards.map(a => a.year).filter(Boolean).join(" & ") || "Recognition";
+
   const kpis = [
-    { value: `${years}`, label: "Years Experience",    sub: "Since 2017",            icon: Clock,      accent: KPI_ACCENTS[0] },
-    { value: `${projects.length || 4}`,  label: "Systems in Production", sub: "ERP · Billing · Gate", icon: Code2,      accent: KPI_ACCENTS[1] },
-    { value: `${awards.length || 2}`,    label: "Company Awards",         sub: "2021 & 2024",           icon: Star,       accent: KPI_ACCENTS[2] },
-    { value: "18+",      label: "Technologies",        sub: "Python · PHP · SQL",    icon: Database,   accent: KPI_ACCENTS[3] },
+    { value: years,                       label: "Years Experience",      sub: "Since 2017",           icon: Clock,    accent: KPI_ACCENTS[0] },
+    { value: String(projects.length || "—"), label: "Systems in Production", sub: topTags,             icon: Code2,    accent: KPI_ACCENTS[1] },
+    { value: String(awards.length   || "—"), label: "Company Awards",        sub: awardYears,          icon: Star,     accent: KPI_ACCENTS[2] },
+    { value: String(skills.length   || "—"), label: "Technologies",          sub: "Skills in production", icon: Database, accent: KPI_ACCENTS[3] },
   ];
 
   return (
@@ -222,7 +219,12 @@ export default function DashboardPage() {
           {/* Quick nav */}
           <div className="card" style={{ padding: "14px 14px 10px" }}>
             <p className="section-title" style={{ marginBottom: "10px" }}>Quick Access</p>
-            {quickLinks.map(({ label, href, icon: Icon, desc, color }) => (
+            {([
+              { label: "Projects",   href: "/projects",   icon: FolderKanban, desc: `${projects.length || "—"} systems in production`, color: "var(--primary)" },
+              { label: "Skills",     href: "/skills",     icon: Wrench,       desc: `${skills.length   || "—"} technologies`,           color: "var(--purple)" },
+              { label: "Experience", href: "/experience", icon: Briefcase,    desc: `${years} years · AsianLand`,                       color: "var(--green)"  },
+              { label: "Contact",    href: "/contact",    icon: Mail,         desc: "Open to opportunities",                            color: "var(--amber)"  },
+            ] as { label: string; href: string; icon: React.ElementType; desc: string; color: string }[]).map(({ label, href, icon: Icon, desc, color }) => (
               <Link key={href} href={href} style={{
                 display: "flex", alignItems: "center", gap: "10px",
                 padding: "8px 9px", borderRadius: "7px",
@@ -280,7 +282,11 @@ export default function DashboardPage() {
             </Link>
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-            {techStack.map((t, i) => (
+            {(techStack.length > 0 ? techStack : [
+              { name: "Python",      icon: "🐍", level: 95, color: "var(--primary)" },
+              { name: "PHP/Laravel", icon: "🐘", level: 95, color: "var(--purple)" },
+              { name: "MySQL",       icon: "🗄️", level: 95, color: "var(--green)"  },
+            ]).map((t, i) => (
               <div key={i} style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                 <span style={{ fontSize: "14px", lineHeight: 1, width: 20, textAlign: "center", flexShrink: 0 }}>{t.icon}</span>
                 <span style={{ fontSize: "12px", fontWeight: 500, color: "var(--fg)", width: 110, flexShrink: 0 }}>{t.name}</span>
@@ -305,28 +311,35 @@ export default function DashboardPage() {
             <p className="section-desc">All production systems operational</p>
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: "0" }}>
-            {activity.map((a, i) => (
-              <div key={i} style={{
-                display: "flex", gap: "12px", alignItems: "flex-start",
-                padding: "10px 0",
-                borderBottom: i < activity.length - 1 ? "1px solid var(--border)" : "none",
-              }}>
-                {/* Timeline dot + line */}
-                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flexShrink: 0, paddingTop: "2px" }}>
-                  <div style={{ width: 22, height: 22, borderRadius: "50%", background: `${a.color}18`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <a.icon size={11} color={a.color} />
+            {projects.map((p, i) => {
+              const color = STATUS_COLORS[i % STATUS_COLORS.length];
+              const Icon  = STATUS_ICONS[i % STATUS_ICONS.length];
+              const desc  = p.impact || (p.desc ? p.desc.slice(0, 42) + "…" : "In production");
+              return (
+                <div key={p.id} style={{
+                  display: "flex", gap: "12px", alignItems: "flex-start",
+                  padding: "10px 0",
+                  borderBottom: i < projects.length - 1 ? "1px solid var(--border)" : "none",
+                }}>
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flexShrink: 0, paddingTop: "2px" }}>
+                    <div style={{ width: 22, height: 22, borderRadius: "50%", background: `${color}18`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <Icon size={11} color={color} />
+                    </div>
+                    {i < projects.length - 1 && (
+                      <div style={{ width: 1, flex: 1, background: "var(--border)", minHeight: 12, marginTop: 3 }} />
+                    )}
                   </div>
-                  {i < activity.length - 1 && (
-                    <div style={{ width: 1, flex: 1, background: "var(--border)", minHeight: 12, marginTop: 3 }} />
-                  )}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ fontSize: "12px", fontWeight: 500, color: "var(--fg)" }}>{p.name}</p>
+                    <p style={{ fontSize: "11px", color: "var(--fg-4)", marginTop: "1px" }}>{desc}</p>
+                  </div>
+                  <span className="badge badge-green" style={{ fontSize: "9px", padding: "1px 5px", flexShrink: 0 }}>{p.status || "Active"}</span>
                 </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ fontSize: "12px", fontWeight: 500, color: "var(--fg)" }}>{a.label}</p>
-                  <p style={{ fontSize: "11px", color: "var(--fg-4)", marginTop: "1px" }}>{a.desc}</p>
-                </div>
-                <span className="badge badge-green" style={{ fontSize: "9px", padding: "1px 5px", flexShrink: 0 }}>{a.time}</span>
-              </div>
-            ))}
+              );
+            })}
+            {projects.length === 0 && (
+              <p style={{ fontSize: "12px", color: "var(--fg-4)", padding: "12px 0" }}>Loading…</p>
+            )}
           </div>
         </motion.div>
       </div>
