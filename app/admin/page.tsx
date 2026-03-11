@@ -4,11 +4,11 @@ import { useRouter } from "next/navigation";
 import {
   LogOut, Plus, Pencil, Trash2, Save, X, Loader2,
   User, FolderKanban, Wrench, Briefcase, Award,
-  Camera, Upload, ImageOff
+  Camera, Upload, ImageOff, Eye
 } from "lucide-react";
 import type { Profile, Project, Skill, Experience, Award as AwardType } from "@/lib/types";
 
-type Tab = "profile" | "projects" | "skills" | "experience" | "awards";
+type Tab = "profile" | "projects" | "skills" | "experience" | "awards" | "visitors";
 
 const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
   { id: "profile",    label: "Profile",    icon: User },
@@ -16,6 +16,7 @@ const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
   { id: "skills",     label: "Skills",     icon: Wrench },
   { id: "experience", label: "Experience", icon: Briefcase },
   { id: "awards",     label: "Awards",     icon: Award },
+  { id: "visitors",   label: "Visitors",   icon: Eye },
 ];
 
 /* ── Small reusable components ───────────────────────────── */
@@ -159,6 +160,7 @@ export default function AdminPage() {
           {tab === "skills"     && <SkillsTab saving={saving} setSaving={setSaving} onSave={showNotice} />}
           {tab === "experience" && <ExperienceTab saving={saving} setSaving={setSaving} onSave={showNotice} />}
           {tab === "awards"     && <AwardsTab saving={saving} setSaving={setSaving} onSave={showNotice} />}
+          {tab === "visitors"   && <VisitorsTab />}
         </main>
       </div>
     </div>
@@ -736,6 +738,125 @@ function SaveBar({ saving, onSave }: { saving: boolean; onSave: () => void }) {
         {saving ? <Loader2 size={14} style={{ animation: "spin 1s linear infinite" }} /> : <Save size={14} />}
         {saving ? "Saving…" : "Save Changes"}
       </button>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════
+   VISITORS TAB
+══════════════════════════════════════════════ */
+type Visitor = {
+  id: number;
+  ip: string;
+  page: string;
+  device: string;
+  browser: string;
+  os: string;
+  visited_at: string;
+};
+
+function VisitorsTab() {
+  const [visitors, setVisitors] = useState<Visitor[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState("");
+
+  const load = useCallback(() => {
+    fetch("/api/visitors").then(r => r.json()).then(d => {
+      setVisitors(Array.isArray(d) ? d : []);
+      setLoading(false);
+    });
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  async function clearAll() {
+    if (!confirm("Delete all visitor logs? This cannot be undone.")) return;
+    await fetch("/api/visitors", { method: "DELETE" });
+    load();
+  }
+
+  const filtered = visitors.filter(v =>
+    !filter ||
+    v.ip?.includes(filter) ||
+    v.page?.toLowerCase().includes(filter.toLowerCase()) ||
+    v.browser?.toLowerCase().includes(filter.toLowerCase()) ||
+    v.os?.toLowerCase().includes(filter.toLowerCase())
+  );
+
+  // Stats
+  const uniqueIPs = new Set(visitors.map(v => v.ip)).size;
+  const pages = visitors.reduce((acc, v) => { acc[v.page] = (acc[v.page] || 0) + 1; return acc; }, {} as Record<string, number>);
+  const topPage = Object.entries(pages).sort((a, b) => b[1] - a[1])[0];
+
+  if (loading) return <Loader />;
+
+  return (
+    <div>
+      <SectionHeader
+        title="Visitors"
+        desc={`${visitors.length} total visits · ${uniqueIPs} unique IPs`}
+        action={
+          <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+            <input
+              value={filter}
+              onChange={e => setFilter(e.target.value)}
+              placeholder="Filter by IP, page, browser…"
+              style={{ ...inputStyle, width: 220, fontSize: "12px", padding: "5px 10px" }}
+            />
+            <button onClick={load} className="btn btn-secondary" style={{ fontSize: "12px", padding: "5px 10px" }}>Refresh</button>
+            {visitors.length > 0 && (
+              <button onClick={clearAll} style={{ fontSize: "12px", padding: "5px 10px", borderRadius: "6px", border: "1px solid #fecaca", background: "#fff1f2", color: "#ef4444", cursor: "pointer" }}>Clear All</button>
+            )}
+          </div>
+        }
+      />
+
+      {/* Stats row */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "10px", marginBottom: "16px" }}>
+        {[
+          { label: "Total Visits",  value: visitors.length },
+          { label: "Unique IPs",    value: uniqueIPs },
+          { label: "Top Page",      value: topPage ? `${topPage[0]} (${topPage[1]})` : "—" },
+        ].map(s => (
+          <div key={s.label} className="card" style={{ padding: "14px 16px" }}>
+            <p style={{ fontSize: "20px", fontWeight: 700, color: "var(--primary)" }}>{s.value}</p>
+            <p style={{ fontSize: "11px", color: "var(--fg-4)", marginTop: "2px" }}>{s.label}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Table */}
+      {filtered.length === 0 ? (
+        <div className="card" style={{ padding: "40px", textAlign: "center", color: "var(--fg-4)", fontSize: "13px" }}>
+          {filter ? "No results match your filter." : "No visitors logged yet. Visits will appear here automatically."}
+        </div>
+      ) : (
+        <div className="card" style={{ overflow: "hidden" }}>
+          {/* Header */}
+          <div style={{ display: "grid", gridTemplateColumns: "130px 110px 1fr 160px 130px", gap: "12px", padding: "10px 16px", background: "var(--surface-2)", borderBottom: "1px solid var(--border)" }}>
+            {["Timestamp", "IP Address", "Page", "Browser", "OS"].map(h => (
+              <span key={h} style={{ fontSize: "10px", fontWeight: 600, color: "var(--fg-4)", textTransform: "uppercase", letterSpacing: "0.07em" }}>{h}</span>
+            ))}
+          </div>
+          {/* Rows */}
+          {filtered.map((v, i) => (
+            <div key={v.id} style={{
+              display: "grid", gridTemplateColumns: "130px 110px 1fr 160px 130px",
+              gap: "12px", padding: "10px 16px",
+              borderBottom: i < filtered.length - 1 ? "1px solid var(--border)" : "none",
+              fontSize: "12px",
+            }}>
+              <span style={{ color: "var(--fg-3)", fontSize: "11px" }}>
+                {new Date(v.visited_at).toLocaleString("en-PH", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+              </span>
+              <span style={{ color: "var(--fg)", fontFamily: "monospace", fontSize: "11px" }}>{v.ip || "—"}</span>
+              <span style={{ color: "var(--primary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{v.page}</span>
+              <span style={{ color: "var(--fg-3)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{v.browser || "—"}</span>
+              <span style={{ color: "var(--fg-3)" }}>{v.os || "—"}</span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

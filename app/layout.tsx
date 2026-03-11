@@ -3,6 +3,7 @@ import "./globals.css";
 import Sidebar from "@/components/Sidebar";
 import MobileNav from "@/components/MobileNav";
 import TopBar from "@/components/TopBar";
+import VisitorTracker from "@/components/VisitorTracker";
 
 export const metadata: Metadata = {
   title: "Jude Dela Cruz — Full Stack Developer",
@@ -42,6 +43,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
         {/* Mobile bottom nav */}
         <MobileNav />
+
+        {/* Visitor tracking */}
+        <VisitorTracker />
 
         <style>{`
           @media (max-width: 768px) {
