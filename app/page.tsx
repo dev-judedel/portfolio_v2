@@ -9,6 +9,7 @@ import {
   ArrowUpRight, Download, Star
 } from "lucide-react";
 import type { Profile, Project, Award as AwardType, Skill } from "@/lib/types";
+import GitHubGraph from "@/components/GitHubGraph";
 
 const fade = (delay = 0) => ({
   initial: { opacity: 0, y: 10 },
@@ -342,6 +343,11 @@ export default function DashboardPage() {
             )}
           </div>
         </motion.div>
+      </div>
+
+      {/* ── GitHub Graph ── */}
+      <div style={{ marginTop: "12px" }}>
+        <GitHubGraph username="dev-judedel" />
       </div>
 
       <style>{`
