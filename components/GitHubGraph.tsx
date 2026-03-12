@@ -226,7 +226,7 @@ export default function GitHubGraph({ username = "dev-judedel" }: { username?: s
               {formatDate(tooltip.date)}
               {/* Arrow */}
               <div style={{
-                position: "absolute", bottom: -5, left: "50%", transform: "translateX(-50%)",
+                position: "absolute", bottom: -5, left: "50%",
                 width: 8, height: 8, background: "var(--surface-2)",
                 border: "1px solid var(--border-strong)", borderTop: "none", borderLeft: "none",
                 transform: "translateX(-50%) rotate(45deg)",
